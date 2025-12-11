@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Fish Tournament",
+    "slug": "fish-tournament",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android", "web"],
+    "jsEngine": "hermes",
+    "web": {
+      "bundler": "metro"
+    }
+  },
+  "name": "FishTournamentApp",
+  "displayName": "Fish Tournament"
+}
+

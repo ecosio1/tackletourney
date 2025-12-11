@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Tournament App - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            background: #000;
+            border-radius: 40px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 30px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Sign In Screen */
+        .auth-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px 30px;
+            height: 100%;
+        }
+
+        .auth-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .auth-subtitle {
+            font-size: 16px;
+            color: #666;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .input {
+            width: 100%;
+            height: 50px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 0 15px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .button {
+            width: 100%;
+            height: 50px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .link-button {
+            text-align: center;
+            margin-top: 20px;
+            color: #4CAF50;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Home Screen */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .tournament-list {
+            padding: 15px;
+            background: #f5f5f5;
+        }
+
+        .tournament-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+        }
+
+        .tournament-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .time-remaining {
+            font-size: 12px;
+            color: #FF5722;
+            font-weight: 600;
+        }
+
+        .tournament-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0.5;
+        }
+
+        .nav-item.active {
+            opacity: 1;
+            color: #4CAF50;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+        }
+
+        /* Tournament Detail */
+        .detail-header {
+            padding: 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .detail-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .prize-amount {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+
+        .rules-text {
+            font-size: 14px;
+            color: #666;
+            line-height: 22px;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        /* Camera Screen */
+        .camera-view {
+            width: 100%;
+            height: 100%;
+            background: #333;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-placeholder {
+            text-align: center;
+            color: #fff;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+        }
+
+        .code-container {
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .code-label {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .code-text {
+            font-size: 36px;
+            color: #4CAF50;
+            font-weight: bold;
+            letter-spacing: 4px;
+        }
+
+        .instructions {
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .instruction-title {
+            font-size: 14px;
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .instruction-text {
+            font-size: 12px;
+            color: #ccc;
+            line-height: 20px;
+        }
+
+        .capture-button {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 35px;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .capture-button-inner {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            background: #fff;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+
+            <!-- Sign In Screen -->
+            <div id="signin" class="screen active">
+                <div class="auth-screen">
+                    <h1 class="auth-title">Fish Tournament</h1>
+                    <p class="auth-subtitle">Compete. Win. Get Paid.</p>
+
+                    <input type="email" class="input" placeholder="Email" id="email">
+                    <input type="password" class="input" placeholder="Password" id="password">
+
+                    <button class="button" onclick="signIn()">Sign In</button>
+
+                    <div class="link-button" onclick="showScreen('signup')">
+                        Don't have an account? Sign Up
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sign Up Screen -->
+            <div id="signup" class="screen">
+                <div class="auth-screen">
+                    <h1 class="auth-title">Create Account</h1>
+                    <p class="auth-subtitle">Join the competition</p>
+
+                    <input type="email" class="input" placeholder="Email *">
+                    <input type="text" class="input" placeholder="Username *">
+                    <input type="password" class="input" placeholder="Password (min 8 characters) *">
+                    <input type="text" class="input" placeholder="Region (e.g., Florida)">
+
+                    <button class="button" onclick="signIn()">Sign Up</button>
+
+                    <div class="link-button" onclick="showScreen('signin')">
+                        Already have an account? Sign In
+                    </div>
+                </div>
+            </div>
+
+            <!-- Home Screen -->
+            <div id="home" class="screen">
+                <div class="header">
+                    <h1 class="header-title">Tournaments</h1>
+                    <span style="font-size: 24px; cursor: pointer;">🔄</span>
+                </div>
+
+                <div class="tournament-list" style="padding-bottom: 100px;">
+                    <div class="tournament-card" onclick="showScreen('tournament-detail')">
+                        <div class="card-header">
+                            <div class="status-badge">ACTIVE</div>
+                            <div class="time-remaining">5h 32m left</div>
+                        </div>
+
+                        <div class="tournament-name">Biggest Snook Today - Tampa Bay</div>
+                        <div class="info-text">🐟 Species: Snook</div>
+
+                        <div class="stats-row">
+                            <div class="stat">
+                                <div class="stat-label">Entry Fee</div>
+                                <div class="stat-value">FREE</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Prize Pool</div>
+                                <div class="stat-value">FREE</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Anglers</div>
+                                <div class="stat-value">45</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tournament-card">
+                        <div class="card-header">
+                            <div class="status-badge">OPEN</div>
+                            <div class="time-remaining">8h 15m left</div>
+                        </div>
+
+                        <div class="tournament-name">Redfish Challenge - Gulf Coast</div>
+                        <div class="info-text">🐟 Species: Redfish</div>
+
+                        <div class="stats-row">
+                            <div class="stat">
+                                <div class="stat-label">Entry Fee</div>
+                                <div class="stat-value">FREE</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Prize Pool</div>
+                                <div class="stat-value">FREE</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Anglers</div>
+                                <div class="stat-value">28</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item active" onclick="showScreen('home'); setActiveTab(0)">
+                        <div class="nav-icon">🏠</div>
+                        <div class="nav-label">Home</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('my-tournaments'); setActiveTab(1)">
+                        <div class="nav-icon">📅</div>
+                        <div class="nav-label">My Tournaments</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('leaderboard'); setActiveTab(2)">
+                        <div class="nav-icon">🏆</div>
+                        <div class="nav-label">Leaderboard</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('profile'); setActiveTab(3)">
+                        <div class="nav-icon">👤</div>
+                        <div class="nav-label">Profile</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tournament Detail Screen -->
+            <div id="tournament-detail" class="screen">
+                <button class="back-button" onclick="showScreen('home')">← Back</button>
+
+                <div style="padding-bottom: 180px; padding-top: 50px;">
+                    <div class="detail-header">
+                        <h1 class="detail-title">Biggest Snook Today - Tampa Bay</h1>
+                        <div class="status-badge">ACTIVE</div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">Tournament Info</div>
+                        <div class="info-text">📅 Today, 6:00 AM - 8:00 PM EST</div>
+                        <div class="info-text">🐟 Species: Snook</div>
+                        <div class="info-text">👥 45 anglers entered</div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">Prize Pool</div>
+                        <div class="prize-amount">FREE Tournament</div>
+                        <div class="info-text">Entry Fee: FREE</div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">Rules</div>
+                        <div class="rules-text">
+                            • Fish must be of specified species<br>
+                            • Catches must be within tournament time window<br>
+                            • Use approved measuring board<br>
+                            • Photos must be taken through app<br>
+                            • Verification code must be visible<br>
+                            • GPS location will be verified
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    <button class="button" onclick="showScreen('camera')">
+                        📷 Log a Catch
+                    </button>
+                    <button class="button" style="background: #fff; color: #4CAF50; border: 1px solid #4CAF50; margin-top: 10px;" onclick="showScreen('leaderboard')">
+                        View Leaderboard
+                    </button>
+                </div>
+            </div>
+
+            <!-- Camera Screen -->
+            <div id="camera" class="screen">
+                <div class="camera-view">
+                    <div class="camera-placeholder">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                        <div style="font-size: 24px; font-weight: bold;">Camera View</div>
+                        <div style="font-size: 14px; color: #999; margin-top: 10px;">Position fish on board with code visible</div>
+                    </div>
+
+                    <div class="camera-overlay">
+                        <div class="code-container">
+                            <div class="code-label">Verification Code:</div>
+                            <div class="code-text">XG7K</div>
+                            <div class="code-label">Show this code in your photo</div>
+                        </div>
+
+                        <div class="instructions">
+                            <div class="instruction-title">Instructions:</div>
+                            <div class="instruction-text">
+                                1. Write code "XG7K" on paper<br>
+                                2. Place fish on measuring board<br>
+                                3. Position code in frame where visible<br>
+                                4. Ensure entire fish is visible<br>
+                                5. Tap capture button
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="back-button" onclick="showScreen('tournament-detail')">← Cancel</button>
+
+                    <div class="capture-button" onclick="capturePhoto()">
+                        <div class="capture-button-inner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Screen -->
+            <div id="leaderboard" class="screen">
+                <div class="header">
+                    <h1 class="header-title">Leaderboard</h1>
+                </div>
+
+                <div style="padding: 20px; padding-bottom: 100px;">
+                    <div style="background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #FFD700;">🥇 #1</div>
+                                <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">angler_joe</div>
+                                <div style="font-size: 14px; color: #666;">24.75 inches • Snook</div>
+                            </div>
+                            <div style="font-size: 36px;">🐟</div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #C0C0C0;">🥈 #2</div>
+                                <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">fisher_pro</div>
+                                <div style="font-size: 14px; color: #666;">23.50 inches • Snook</div>
+                            </div>
+                            <div style="font-size: 36px;">🐟</div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #CD7F32;">🥉 #3</div>
+                                <div style="font-size: 16px; font-weight: bold; margin-top: 5px;">You</div>
+                                <div style="font-size: 14px; color: #666;">22.25 inches • Snook</div>
+                            </div>
+                            <div style="font-size: 36px;">🐟</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item" onclick="showScreen('home'); setActiveTab(0)">
+                        <div class="nav-icon">🏠</div>
+                        <div class="nav-label">Home</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('my-tournaments'); setActiveTab(1)">
+                        <div class="nav-icon">📅</div>
+                        <div class="nav-label">My Tournaments</div>
+                    </div>
+                    <div class="nav-item active" onclick="showScreen('leaderboard'); setActiveTab(2)">
+                        <div class="nav-icon">🏆</div>
+                        <div class="nav-label">Leaderboard</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('profile'); setActiveTab(3)">
+                        <div class="nav-icon">👤</div>
+                        <div class="nav-label">Profile</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Tournaments Screen -->
+            <div id="my-tournaments" class="screen">
+                <div class="header">
+                    <h1 class="header-title">My Tournaments</h1>
+                </div>
+
+                <div style="padding-bottom: 100px;">
+                    <div class="tournament-card" onclick="showScreen('tournament-detail')">
+                        <div class="card-header">
+                            <div class="status-badge">ACTIVE</div>
+                            <div class="time-remaining">5h 32m left</div>
+                        </div>
+
+                        <div class="tournament-name">Biggest Snook Today</div>
+                        <div class="info-text">Your rank: #3 • Best catch: 22.25 inches</div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item" onclick="showScreen('home'); setActiveTab(0)">
+                        <div class="nav-icon">🏠</div>
+                        <div class="nav-label">Home</div>
+                    </div>
+                    <div class="nav-item active" onclick="showScreen('my-tournaments'); setActiveTab(1)">
+                        <div class="nav-icon">📅</div>
+                        <div class="nav-label">My Tournaments</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('leaderboard'); setActiveTab(2)">
+                        <div class="nav-icon">🏆</div>
+                        <div class="nav-label">Leaderboard</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('profile'); setActiveTab(3)">
+                        <div class="nav-icon">👤</div>
+                        <div class="nav-label">Profile</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Screen -->
+            <div id="profile" class="screen">
+                <div class="header">
+                    <h1 class="header-title">Profile</h1>
+                </div>
+
+                <div style="padding: 20px; padding-bottom: 100px;">
+                    <div style="text-align: center; padding: 30px 0; border-bottom: 1px solid #f0f0f0;">
+                        <div style="font-size: 72px; margin-bottom: 10px;">👤</div>
+                        <div style="font-size: 24px; font-weight: bold;">angler_demo</div>
+                        <div style="font-size: 14px; color: #999; margin-top: 5px;">Florida</div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">Stats</div>
+                        <div class="stats-row">
+                            <div class="stat">
+                                <div class="stat-label">Tournaments</div>
+                                <div class="stat-value">12</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Catches</div>
+                                <div class="stat-value">34</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-label">Earnings</div>
+                                <div class="stat-value">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="button" style="background: #f44336;" onclick="signOut()">
+                        Sign Out
+                    </button>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="nav-item" onclick="showScreen('home'); setActiveTab(0)">
+                        <div class="nav-icon">🏠</div>
+                        <div class="nav-label">Home</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('my-tournaments'); setActiveTab(1)">
+                        <div class="nav-icon">📅</div>
+                        <div class="nav-label">My Tournaments</div>
+                    </div>
+                    <div class="nav-item" onclick="showScreen('leaderboard'); setActiveTab(2)">
+                        <div class="nav-icon">🏆</div>
+                        <div class="nav-label">Leaderboard</div>
+                    </div>
+                    <div class="nav-item active" onclick="showScreen('profile'); setActiveTab(3)">
+                        <div class="nav-icon">👤</div>
+                        <div class="nav-label">Profile</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function showScreen(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+
+            // Show selected screen
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function signIn() {
+            showScreen('home');
+        }
+
+        function signOut() {
+            showScreen('signin');
+        }
+
+        function setActiveTab(index) {
+            document.querySelectorAll('.nav-item').forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function capturePhoto() {
+            alert('Photo captured!\n\nIn the real app, this would:\n• Capture the photo with device camera\n• Include GPS coordinates\n• Submit to server for validation\n• Show measurement results');
+            showScreen('tournament-detail');
+        }
+    </script>
+</body>
+</html>
