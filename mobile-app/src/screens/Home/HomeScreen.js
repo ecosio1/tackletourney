@@ -76,6 +76,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   useEffect(() => {
     loadTournaments();
@@ -162,10 +163,24 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tournaments</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <Icon name="refresh" size={20} color={colors.textHighlight} />
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Tournaments</Text>
+          <View style={styles.filterBadge}>
+            <Icon name="location-on" size={12} color={colors.accent} />
+            <Text style={styles.filterBadgeText}>{locationLabel}</Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => setShowFilterModal(true)}
+            style={styles.filterButton}
+          >
+            <Icon name="tune" size={20} color={colors.textHighlight} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+            <Icon name="refresh" size={20} color={colors.textHighlight} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -179,42 +194,6 @@ export default function HomeScreen({ navigation }) {
         }
         contentContainerStyle={styles.scrollContainer}
       >
-        <View style={styles.locationBanner}>
-          <View style={styles.locationCopy}>
-            <Text style={styles.locationLabel}>You’re browsing</Text>
-            <Text style={styles.locationValue}>{locationLabel}</Text>
-            <Text style={styles.locationSubLabel}>
-              Showing tournaments in {stateLabel}
-            </Text>
-          </View>
-
-          <View style={styles.locationPresets}>
-            {presets.map((preset) => {
-              const isActive = preset.label === locationLabel;
-              return (
-                <TouchableOpacity
-                  key={preset.id}
-                  style={[
-                    styles.presetChip,
-                    isActive && styles.presetChipActive,
-                  ]}
-                  onPress={() => setActivePresetId(preset.id)}
-                  activeOpacity={0.86}
-                >
-                  <Text
-                    style={[
-                      styles.presetChipText,
-                      isActive && styles.presetChipTextActive,
-                    ]}
-                  >
-                    {preset.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
         {error && (
           <View style={styles.errorBanner}>
             <Icon name="error-outline" size={20} color={colors.danger} />
@@ -291,6 +270,76 @@ export default function HomeScreen({ navigation }) {
           );
         })}
       </ScrollView>
+
+      {showFilterModal && (
+        <>
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowFilterModal(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Location</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Icon name="close" size={24} color={colors.textHighlight} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScrollView}>
+              <View style={styles.modalBody}>
+                <Text style={styles.modalLabel}>YOU'RE BROWSING</Text>
+                <Text style={styles.modalSubtitle}>
+                  Showing tournaments in {stateLabel}
+                </Text>
+
+                <View style={styles.modalPresets}>
+                  {presets.map((preset) => {
+                    const isActive = preset.label === locationLabel;
+                    return (
+                      <TouchableOpacity
+                        key={preset.id}
+                        style={[
+                          styles.modalPresetItem,
+                          isActive && styles.modalPresetItemActive,
+                        ]}
+                        onPress={() => {
+                          setActivePresetId(preset.id);
+                          setTimeout(() => setShowFilterModal(false), 200);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.modalPresetLeft}>
+                          <Icon
+                            name={isActive ? 'radio-button-checked' : 'radio-button-unchecked'}
+                            size={24}
+                            color={isActive ? colors.accent : colors.textMuted}
+                          />
+                          <Text
+                            style={[
+                              styles.modalPresetText,
+                              isActive && styles.modalPresetTextActive,
+                            ]}
+                          >
+                            {preset.label}
+                          </Text>
+                        </View>
+                        {isActive && (
+                          <Icon name="check" size={20} color={colors.accent} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -308,8 +357,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerLeft: {
+    flex: 1,
+    gap: spacing.xs,
+  },
   headerTitle: {
     ...typography.heading,
+  },
+  filterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  filterBadgeText: {
+    ...typography.caption,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   refreshButton: {
     padding: spacing.xs,
@@ -321,57 +399,6 @@ const styles = StyleSheet.create({
   scrollContainer: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-  },
-  locationBanner: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
-  },
-  locationCopy: {
-    marginBottom: spacing.md,
-  },
-  locationLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  locationValue: {
-    ...typography.title,
-    color: colors.textHighlight,
-    marginTop: spacing.xs / 2,
-  },
-  locationSubLabel: {
-    ...typography.body,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
-  },
-  locationPresets: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  presetChip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.borderMuted,
-  },
-  presetChipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accentDark,
-  },
-  presetChipText: {
-    ...typography.caption,
-    color: colors.textHighlight,
-  },
-  presetChipTextActive: {
-    color: colors.background,
   },
   sectionContainer: {
     marginBottom: spacing.xl,
@@ -418,5 +445,101 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     ...typography.body,
     color: colors.textMuted,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 100,
+  },
+  modalContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg * 1.5,
+    borderTopRightRadius: radius.lg * 1.5,
+    maxHeight: '70%',
+    zIndex: 101,
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.borderMuted,
+    borderRadius: radius.pill,
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    ...typography.title,
+    color: colors.textHighlight,
+  },
+  modalCloseButton: {
+    padding: spacing.xs / 2,
+  },
+  modalBody: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  modalLabel: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.xs / 2,
+  },
+  modalSubtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  modalPresets: {
+    gap: spacing.sm,
+  },
+  modalPresetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  modalPresetItemActive: {
+    backgroundColor: colors.surfaceHighlight,
+    borderColor: colors.accent,
+  },
+  modalPresetLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
+  modalPresetText: {
+    ...typography.body,
+    color: colors.textHighlight,
+    fontWeight: '600',
+  },
+  modalPresetTextActive: {
+    color: colors.accent,
   },
 });

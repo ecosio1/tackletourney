@@ -5,9 +5,11 @@ export const colors = {
   surfaceHighlight: '#1d2c54',
   border: '#22335f',
   borderMuted: '#2a3d6f',
-  accent: '#34d399',
-  accentMuted: '#22c55e',
-  accentDark: '#059669',
+  accent: '#33B792',
+  accentMuted: '#2A9A7B',
+  accentDark: '#1F7A62',
+  neonBlue: '#22d3ee',
+  neonPurple: '#a78bfa',
   textPrimary: '#f8fafc',
   textSecondary: '#cbd5f5',
   textMuted: '#94a3b8',
@@ -15,6 +17,8 @@ export const colors = {
   warning: '#facc15',
   danger: '#f87171',
   dangerBg: '#7f1d1d',
+  success: '#34d399',
+  info: '#38bdf8',
 };
 
 export const spacing = {

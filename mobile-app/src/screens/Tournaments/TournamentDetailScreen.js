@@ -10,10 +10,20 @@ import {
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { tournamentAPI } from '../../services/api';
 import { useJoinedTournaments } from '../../state/joined-tournaments-context';
+import { useCatches } from '../../state/catches-context';
 import SectionHeader from '../../components/ui/SectionHeader';
 import StatPill from '../../components/ui/StatPill';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import Card from '../../components/ui/Card';
+import Banner from '../../components/ui/Banner';
 import { colors, radius, spacing, typography } from '../../styles/tokens';
+import { isTournamentActive } from '../../utils/location-boundary';
+import {
+  canJoinTournament,
+  canSubmitCatch,
+  getTournamentLifecycle,
+  TOURNAMENT_LIFECYCLE,
+} from '../../utils/tournament-lifecycle';
 
 const STATE_NAMES = {
   FL: 'Florida',
@@ -147,8 +157,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
 
   const { isTournamentJoined, joinTournament, isJoining } =
     useJoinedTournaments();
+  const { getCatchesForTournament } = useCatches();
   const joined = isTournamentJoined(id);
   const joining = isJoining(id);
+  const [catchToast, setCatchToast] = useState(null);
 
   useEffect(() => {
     loadTournamentDetails();
@@ -159,6 +171,16 @@ export default function TournamentDetailScreen({ route, navigation }) {
       setJoinSuccess(false);
     }
   }, [joined]);
+
+  const catchesForTournament = useMemo(
+    () => getCatchesForTournament(id),
+    [getCatchesForTournament, id]
+  );
+
+  const handleCatchSubmitted = useCallback((catchRecord) => {
+    setCatchToast(`Catch submitted (${catchRecord.length}" ${catchRecord.species ?? ''})`);
+    setTimeout(() => setCatchToast(null), 3500);
+  }, []);
 
   const scopeDetails = useMemo(() => getScopeDetails(tournament), [tournament]);
   const scheduleLabel = useMemo(
@@ -194,11 +216,14 @@ export default function TournamentDetailScreen({ route, navigation }) {
   }, [id, joinTournament]);
 
   const handleLogCatch = () => {
-    navigation.navigate('LogFish', { tournamentId: id, tournament });
+    navigation.navigate('LogFish', {
+      tournamentId: id,
+      onCatchSubmitted: handleCatchSubmitted,
+    });
   };
 
   const handleViewLeaderboard = () => {
-    navigation.navigate('Leaderboard', { tournament_id: id });
+    navigation.navigate('Leaderboard', { tournamentId: id });
   };
 
   if (loading) {
@@ -218,21 +243,55 @@ export default function TournamentDetailScreen({ route, navigation }) {
   }
 
   const prizePool = parseFloat(tournament.prize_pool || 0);
-  const isActive =
-    (tournament.status ?? '').toLowerCase() === 'active' ||
-    (tournament.status ?? '').toLowerCase() === 'ongoing';
-  const joinedBannerMessage = isActive
+  const now = new Date();
+  const startDate = tournament.start_time ? new Date(tournament.start_time) : null;
+  const endDate = tournament.end_time ? new Date(tournament.end_time) : null;
+  const hasValidWindow =
+    startDate &&
+    endDate &&
+    !Number.isNaN(startDate) &&
+    !Number.isNaN(endDate);
+  const isEnded = Boolean(hasValidWindow && now > endDate);
+  const isActiveNow = Boolean(hasValidWindow && isTournamentActive(tournament, now));
+  const lifecycle = getTournamentLifecycle(tournament, now);
+  const isUpcoming = lifecycle === TOURNAMENT_LIFECYCLE.UPCOMING;
+  const isEndingSoon = lifecycle === TOURNAMENT_LIFECYCLE.ENDING_SOON;
+  const isArchived = lifecycle === TOURNAMENT_LIFECYCLE.ARCHIVED;
+  const joinable = canJoinTournament(tournament, now);
+  const canLogCatch = canSubmitCatch(tournament, now);
+
+  const startTimeLabel = startDate
+    ? startDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    : null;
+
+  const joinedBannerMessage = isArchived
+    ? 'Tournament archived. Final placements are available.'
+    : isEnded
+    ? 'Tournament ended. Final placements are available.'
+    : isEndingSoon
+    ? 'Ending soon. Submit your last catches before time runs out.'
+    : isActiveNow
     ? 'You’re in! Stay within the boundary to log fish.'
-    : 'You’re in! Logging opens when the event is active.';
+    : startTimeLabel
+    ? `You’re in! Logging unlocks at ${startTimeLabel}.`
+    : 'You’re in! Logging unlocks when the event is active.';
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.heroCard}>
+        <Card style={styles.heroCard}>
           <View style={styles.statusRow}>
             <View style={styles.statusBadge}>
               <Text style={styles.statusLabel}>
-                {(tournament.status ?? 'Scheduled').toUpperCase()}
+                {(lifecycle === TOURNAMENT_LIFECYCLE.LIVE
+                  ? 'LIVE'
+                  : lifecycle === TOURNAMENT_LIFECYCLE.ENDED
+                  ? 'ENDED'
+                  : lifecycle === TOURNAMENT_LIFECYCLE.ARCHIVED
+                  ? 'ARCHIVED'
+                  : lifecycle === TOURNAMENT_LIFECYCLE.ENDING_SOON
+                  ? 'ENDING SOON'
+                  : 'UPCOMING')}
               </Text>
             </View>
             {joined ? (
@@ -268,10 +327,15 @@ export default function TournamentDetailScreen({ route, navigation }) {
               label='Anglers'
               value={tournament.participant_count ?? 0}
             />
+            <StatPill
+              icon='emoji-events'
+              label='My Catches'
+              value={catchesForTournament.length}
+            />
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.sectionCard}>
+        <Card variant="muted" style={styles.sectionCard}>
           <SectionHeader title='Tournament Info' subtitle={scheduleLabel} />
           <View style={styles.infoRow}>
             <Icon name='pets' size={20} color={colors.textMuted} />
@@ -283,9 +347,9 @@ export default function TournamentDetailScreen({ route, navigation }) {
             <Icon name='place' size={20} color={colors.textMuted} />
             <Text style={styles.infoText}>{scopeDetails.coverage}</Text>
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.sectionCard}>
+        <Card variant="muted" style={styles.sectionCard}>
           <SectionHeader
             title='Rules Overview'
             subtitle='Full rules available from the host'
@@ -298,32 +362,38 @@ export default function TournamentDetailScreen({ route, navigation }) {
             • Verification code must be visible{'\n'}
             • GPS location will be verified for each catch
           </Text>
-        </View>
+        </Card>
 
         {error && (
-          <View style={styles.errorBanner}>
-            <Icon name='error-outline' size={18} color={colors.danger} />
-            <Text style={styles.errorMessage}>{error}</Text>
-          </View>
+          <Banner variant="danger" message={error} />
         )}
 
         {joinSuccess && (
-          <View style={styles.successBanner}>
-            <Icon name='celebration' size={18} color={colors.accent} />
-            <Text style={styles.successMessage}>
-              You joined this tournament. Get ready for the first cast!
-            </Text>
-          </View>
+          <Banner
+            variant="success"
+            icon="celebration"
+            message="You joined this tournament. Get ready for the first cast!"
+          />
+        )}
+
+        {catchToast && (
+          <Banner variant="success" icon="check-circle" message={catchToast} />
         )}
       </ScrollView>
 
       <View style={styles.footer}>
         {!joined ? (
           <PrimaryButton
-            label={joining ? 'Joining…' : 'Join Tournament'}
+            label={
+              !joinable
+                ? 'Tournament Ended'
+                : joining
+                ? 'Joining…'
+                : 'Join Tournament'
+            }
             icon='how-to-reg'
             onPress={handleJoinTournament}
-            disabled={joining}
+            disabled={joining || !joinable}
           />
         ) : (
           <>
@@ -331,20 +401,38 @@ export default function TournamentDetailScreen({ route, navigation }) {
               <Icon name='check-circle' size={20} color={colors.accent} />
               <Text style={styles.joinedBannerText}>{joinedBannerMessage}</Text>
             </View>
-            <PrimaryButton
-              label={isActive ? 'Log Fish' : 'Log Fish (locked)'}
-              icon='camera-alt'
-              onPress={handleLogCatch}
-              disabled={!isActive}
-            />
-            <View style={styles.secondaryButtonWrapper}>
+            {isEnded || isArchived ? (
               <PrimaryButton
-                label='View Leaderboard'
+                label={isArchived ? 'Archived · View Final Placements' : 'Tournament Ended · View Final Placements'}
                 icon='leaderboard'
-                variant='secondary'
                 onPress={handleViewLeaderboard}
               />
-            </View>
+            ) : (
+              <>
+                <PrimaryButton
+                  label={
+                    canLogCatch
+                      ? isEndingSoon
+                        ? 'Log Fish (Ending soon)'
+                        : 'Log Fish'
+                      : isUpcoming && startTimeLabel
+                      ? `Starts at ${startTimeLabel}`
+                      : 'Log Fish (locked)'
+                  }
+                  icon={canLogCatch ? 'camera-alt' : 'schedule'}
+                  onPress={handleLogCatch}
+                  disabled={!canLogCatch}
+                />
+                <View style={styles.secondaryButtonWrapper}>
+                  <PrimaryButton
+                    label={isActiveNow ? 'View Leaderboard' : 'View Leaderboard'}
+                    icon='leaderboard'
+                    variant='secondary'
+                    onPress={handleViewLeaderboard}
+                  />
+                </View>
+              </>
+            )}
           </>
         )}
       </View>
@@ -379,10 +467,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   heroCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.md,
   },
@@ -437,10 +521,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   sectionCard: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.sm,
   },
@@ -458,36 +538,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     lineHeight: 20,
     color: colors.textSecondary,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    backgroundColor: '#7f1d1d33',
-  },
-  errorMessage: {
-    ...typography.body,
-    color: colors.textHighlight,
-    flex: 1,
-  },
-  successBanner: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.accent,
-    backgroundColor: '#14532d33',
-  },
-  successMessage: {
-    ...typography.body,
-    color: colors.textHighlight,
-    flex: 1,
   },
   footer: {
     padding: spacing.lg,

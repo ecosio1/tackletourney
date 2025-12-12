@@ -11,7 +11,7 @@ import {
 } from '../mocks/tournaments';
 
 // Base API configuration
-const API_BASE_URL = 'http://localhost:3000/api'; // Change to your server URL
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // Create axios instance
 const api = axios.create({

@@ -7,6 +7,30 @@
     "userInterfaceStyle": "light",
     "platforms": ["ios", "android", "web"],
     "jsEngine": "hermes",
+    "extra": {
+      "ROBOFLOW_API_KEY": "${ROBOFLOW_API_KEY}",
+      "ROBOFLOW_MODEL_ID": "${ROBOFLOW_MODEL_ID}",
+      "ROBOFLOW_VERSION": "${ROBOFLOW_VERSION}",
+      "MEASUREMENT_CONFIDENCE_THRESHOLD": "${MEASUREMENT_CONFIDENCE_THRESHOLD}",
+      "ARUCO_MARKER_SIZE_INCHES": "${ARUCO_MARKER_SIZE_INCHES}"
+    },
+    "plugins": [
+      "expo-camera",
+      [
+        "expo-constants",
+        {
+          "ENV": "production"
+        }
+      ]
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need camera access so you can capture your catch photo for tournament submissions."
+      }
+    },
+    "android": {
+      "permissions": ["CAMERA"]
+    },
     "web": {
       "bundler": "metro"
     }

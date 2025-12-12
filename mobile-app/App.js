@@ -1,8 +1,8 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useState, useMemo } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Platform, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -18,11 +18,71 @@ import LeaderboardScreen from './src/screens/Leaderboard/LeaderboardScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import MyTournamentsScreen from './src/screens/Tournaments/MyTournamentsScreen';
 import LogFishScreen from './src/screens/Catch/LogFishScreen';
+import DevToolsScreen from './src/screens/DevTools/DevToolsScreen';
 import { JoinedTournamentsProvider } from './src/state/joined-tournaments-context';
 import { UserLocationProvider } from './src/state/user-location-context';
+import { CatchesProvider } from './src/state/catches-context';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
+
+function MainTabBar({ state, descriptors, navigation, position }) {
+  return (
+    <View style={styles.tabBar}>
+      {state.routes.map((route, index) => {
+        const isFocused = state.index === index;
+        const { options } = descriptors[route.key];
+        const label =
+          options.tabBarLabel !== undefined
+            ? options.tabBarLabel
+            : options.title !== undefined
+            ? options.title
+            : route.name;
+
+        let iconName = 'circle';
+        if (route.name === 'Home') {
+          iconName = 'home';
+        } else if (route.name === 'MyTournaments') {
+          iconName = 'event';
+        } else if (route.name === 'Leaderboards') {
+          iconName = 'leaderboard';
+        } else if (route.name === 'Profile') {
+          iconName = 'person';
+        }
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <View
+            key={route.key}
+            style={[styles.tabBarItem, isFocused && styles.tabBarItemActive]}
+            onTouchEnd={onPress}
+          >
+            <MaterialIcons
+              name={iconName}
+              size={22}
+              color={isFocused ? '#33B792' : '#94a3b8'}
+            />
+            <View style={styles.tabLabelWrap}>
+              <View style={isFocused ? styles.tabIndicator : styles.tabIndicatorHidden} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 // Main tabs after authentication
 function MainTabs() {
@@ -32,26 +92,13 @@ function MainTabs() {
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ color, size }) => {
-          let iconName;
-
-          if (route.name === 'Home') {
-            iconName = 'home';
-          } else if (route.name === 'MyTournaments') {
-            iconName = 'event';
-          } else if (route.name === 'Leaderboards') {
-            iconName = 'leaderboard';
-          } else if (route.name === 'Profile') {
-            iconName = 'person';
-          }
-
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: 'gray',
+      tabBarPosition="bottom"
+      swipeEnabled
+      animationEnabled
+      tabBar={(props) => <MainTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-      })}
+      }}
     >
       <Tab.Screen
         name="Home"
@@ -84,6 +131,23 @@ export default function App() {
   const shouldBypassAuth = true;
 
   useEffect(() => {
+    // Hide scrollbars on web
+    if (Platform.OS === 'web') {
+      const style = document.createElement('style');
+      style.textContent = `
+        * {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        *::-webkit-scrollbar {
+          display: none;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  useEffect(() => {
     if (shouldBypassAuth) {
       setIsAuthenticated(true);
       setIsLoading(false);
@@ -108,40 +172,62 @@ export default function App() {
     () => (
       <UserLocationProvider>
         <JoinedTournamentsProvider>
-          <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              {!isAuthenticated ? (
-                <>
-                  <Stack.Screen name="SignIn" component={SignInScreen} />
-                  <Stack.Screen name="SignUp" component={SignUpScreen} />
-                </>
-              ) : (
-                <>
-                  <Stack.Screen name="MainTabs" component={MainTabs} />
-                  <Stack.Screen
-                    name="TournamentDetail"
-                    component={TournamentDetailScreen}
-                    options={{ headerShown: true, title: 'Tournament' }}
-                  />
-                  <Stack.Screen
-                    name="CatchCamera"
-                    component={CatchCameraScreen}
-                    options={{ headerShown: true, title: 'Log Catch' }}
-                  />
-                  <Stack.Screen
-                    name="LogFish"
-                    component={LogFishScreen}
-                    options={{ headerShown: true, title: 'Log Fish' }}
-                  />
-                  <Stack.Screen
-                    name="CatchSubmit"
-                    component={CatchSubmitScreen}
-                    options={{ headerShown: true, title: 'Submit Catch' }}
-                  />
-                </>
-              )}
-            </Stack.Navigator>
-          </NavigationContainer>
+          <CatchesProvider>
+            <ErrorBoundary>
+              <NavigationContainer>
+                <Stack.Navigator
+                  screenOptions={{
+                    headerShown: false,
+                    gestureEnabled: Platform.OS !== 'web',
+                    gestureDirection: 'horizontal',
+                    cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+                    cardOverlayEnabled: true,
+                  }}
+                >
+                  {!isAuthenticated ? (
+                    <>
+                      <Stack.Screen name="SignIn" component={SignInScreen} />
+                      <Stack.Screen name="SignUp" component={SignUpScreen} />
+                    </>
+                  ) : (
+                    <>
+                      <Stack.Screen name="MainTabs" component={MainTabs} />
+                      <Stack.Screen
+                        name="TournamentDetail"
+                        component={TournamentDetailScreen}
+                        options={{ headerShown: true, title: 'Tournament' }}
+                      />
+                      <Stack.Screen
+                        name="Leaderboard"
+                        component={LeaderboardScreen}
+                        options={{ headerShown: true, title: 'Leaderboard' }}
+                      />
+                      <Stack.Screen
+                        name="CatchCamera"
+                        component={CatchCameraScreen}
+                        options={{ headerShown: true, title: 'Log Catch' }}
+                      />
+                      <Stack.Screen
+                        name="LogFish"
+                        component={LogFishScreen}
+                        options={{ headerShown: true, title: 'Log Fish' }}
+                      />
+                      <Stack.Screen
+                        name="CatchSubmit"
+                        component={CatchSubmitScreen}
+                        options={{ headerShown: true, title: 'Submit Catch' }}
+                      />
+                      <Stack.Screen
+                        name="DevTools"
+                        component={DevToolsScreen}
+                        options={{ headerShown: true, title: 'Dev Tools' }}
+                      />
+                    </>
+                  )}
+                </Stack.Navigator>
+              </NavigationContainer>
+            </ErrorBoundary>
+          </CatchesProvider>
         </JoinedTournamentsProvider>
       </UserLocationProvider>
     ),
@@ -227,5 +313,42 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 38,
     overflow: 'hidden',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148, 163, 184, 0.25)',
+    paddingBottom: 10,
+    paddingTop: 8,
+    paddingHorizontal: 14,
+    justifyContent: 'space-between',
+  },
+  tabBarItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  tabBarItemActive: {
+    transform: [{ translateY: -1 }],
+  },
+  tabLabelWrap: {
+    height: 6,
+    marginTop: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIndicator: {
+    width: 22,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: '#33B792',
+  },
+  tabIndicatorHidden: {
+    width: 22,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: 'transparent',
   },
 });

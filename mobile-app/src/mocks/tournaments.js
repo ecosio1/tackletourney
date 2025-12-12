@@ -67,6 +67,40 @@ const mockLeaderboard = [
 
 export const mockTournaments = [
   {
+    id: 'tournament-swfl-slot-slam',
+    state: 'FL',
+    scopeLevel: 'REGION',
+    regionName: 'Southwest Florida',
+    geoBoundary: {
+      type: 'REGION',
+      name: 'Southwest Florida',
+      center: { lat: 26.142036, lng: -81.79481 },
+      radiusKm: 140,
+    },
+    name: 'SWFL Slot Slam',
+    status: 'active',
+    entry_fee: 20,
+    prize_pool: 1200,
+    participant_count: 54,
+    start_time: offsetToIso(-1000 * 60 * 60 * 2),
+    end_time: offsetToIso(1000 * 60 * 60 * 6),
+    species: ['Redfish', 'Snook'],
+    region: 'Naples, FL',
+    cover_image:
+      'https://images.unsplash.com/photo-1523419409543-a9d57c662d10?auto=format&fit=crop&w=1200&q=60',
+    summary:
+      'Target slot redfish and snook across SWFL. Location enforced at submission time—stay inside the region to log catches.',
+    leaderboard: [
+      {
+        angler: 'Casey Morgan',
+        fish: 'Redfish',
+        length_in: 29.2,
+        weight_lb: 8.4,
+        submitted_at: offsetToIso(-1000 * 60 * 24),
+      },
+    ],
+  },
+  {
     id: 'tournament-gulf-slam',
     state: 'FL',
     scopeLevel: 'REGION',
