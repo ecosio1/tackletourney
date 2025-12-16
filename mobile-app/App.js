@@ -6,6 +6,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { Platform, View, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Text } from 'react-native';
 
 // Import screens
 import SignInScreen from './src/screens/Auth/SignInScreen';
@@ -74,6 +75,12 @@ function MainTabBar({ state, descriptors, navigation, position }) {
               size={22}
               color={isFocused ? '#33B792' : '#94a3b8'}
             />
+            <Text
+              numberOfLines={1}
+              style={[styles.tabLabel, isFocused && styles.tabLabelActive]}
+            >
+              {label}
+            </Text>
             <View style={styles.tabLabelWrap}>
               <View style={isFocused ? styles.tabIndicator : styles.tabIndicatorHidden} />
             </View>
@@ -335,9 +342,19 @@ const styles = StyleSheet.create({
   },
   tabLabelWrap: {
     height: 6,
-    marginTop: 6,
+    marginTop: 4,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tabLabel: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 0.2,
+  },
+  tabLabelActive: {
+    color: '#33B792',
   },
   tabIndicator: {
     width: 22,

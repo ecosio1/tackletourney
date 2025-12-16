@@ -98,6 +98,7 @@ export function CatchesProvider({ children }) {
           catchData?.locationCapturedAt ?? catchData?.gpsCapturedAt ?? createdAt,
         status: catchData?.status ?? 'pending',
         measurement: catchData?.measurement ?? null,
+        prizeEligible: catchData?.prizeEligible,
       };
 
       setCatches((prev) => {

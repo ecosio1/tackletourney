@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
-import { Camera, CameraType } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import useUserLocation from '../../hooks/useUserLocation';
 import {
   checkLocationAllowedForTournament,
@@ -89,10 +89,11 @@ export default function LogFishScreen({ route, navigation }) {
     flags: [],
     startedAt: null,
     completedAt: null,
+      referenceObject: null,
     referenceObject: null,
   });
-  const [cameraPermission, requestCameraPermission] = Camera.useCameraPermissions();
-  const [cameraType, setCameraType] = useState(CameraType.back);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraFacing, setCameraFacing] = useState('back');
   const [isCapturing, setIsCapturing] = useState(false);
   const [cameraKey, setCameraKey] = useState(0);
   const cameraRef = React.useRef(null);
@@ -189,6 +190,7 @@ export default function LogFishScreen({ route, navigation }) {
             flags: Array.isArray(result.flags) ? result.flags : [],
             startedAt: result.startedAt ?? null,
             completedAt: result.completedAt ?? null,
+            referenceObject: result.referenceObject ?? null,
           });
         }
       } catch (error) {
@@ -268,7 +270,7 @@ export default function LogFishScreen({ route, navigation }) {
   };
 
   const handleFlipCamera = () => {
-    setCameraType((prev) => (prev === CameraType.back ? CameraType.front : CameraType.back));
+    setCameraFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   };
 
   const handleSubmitCatch = () => {
@@ -571,11 +573,11 @@ export default function LogFishScreen({ route, navigation }) {
                 </View>
               ) : (
                 <View style={styles.cameraCard}>
-                  <Camera
+                  <CameraView
                     key={cameraKey}
                     ref={cameraRef}
                     style={styles.camera}
-                    type={cameraType}
+                    facing={cameraFacing}
                     ratio="16:9"
                   />
                   <View style={styles.cameraOverlayTop}>
