@@ -20,7 +20,7 @@ export default function SectionHeader({ title, subtitle, actionLabel, onPressAct
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     flexDirection: 'row',
     justifyContent: 'space-between',

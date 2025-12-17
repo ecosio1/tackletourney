@@ -3,10 +3,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { Platform, View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet, Pressable, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Text } from 'react-native';
 
 // Import screens
 import SignInScreen from './src/screens/Auth/SignInScreen';
@@ -64,11 +63,26 @@ function MainTabBar({ state, descriptors, navigation, position }) {
           }
         };
 
+        const onLongPress = () => {
+          navigation.emit({
+            type: 'tabLongPress',
+            target: route.key,
+          });
+        };
+
         return (
-          <View
+          <Pressable
             key={route.key}
-            style={[styles.tabBarItem, isFocused && styles.tabBarItemActive]}
-            onTouchEnd={onPress}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            style={({ pressed }) => [
+              styles.tabBarItem,
+              isFocused && styles.tabBarItemActive,
+              pressed && styles.tabBarItemPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={String(label)}
           >
             <MaterialIcons
               name={iconName}
@@ -84,7 +98,7 @@ function MainTabBar({ state, descriptors, navigation, position }) {
             <View style={styles.tabLabelWrap}>
               <View style={isFocused ? styles.tabIndicator : styles.tabIndicatorHidden} />
             </View>
-          </View>
+          </Pressable>
         );
       })}
     </View>
@@ -336,6 +350,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 6,
+  },
+  tabBarItemPressed: {
+    opacity: 0.75,
   },
   tabBarItemActive: {
     transform: [{ translateY: -1 }],

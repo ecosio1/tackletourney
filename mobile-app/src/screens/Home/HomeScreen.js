@@ -7,13 +7,26 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { tournamentAPI } from '../../services/api';
 import useUserLocation from '../../hooks/useUserLocation';
 import { useJoinedTournaments } from '../../state/joined-tournaments-context';
 import TournamentCard from '../../components/ui/TournamentCard';
 import SectionHeader from '../../components/ui/SectionHeader';
+import FilterChips from '../../components/ui/FilterChips';
+import SortDropdown from '../../components/ui/SortDropdown';
+import FilterEmptyState from '../../components/ui/FilterEmptyState';
+import { applyFilter } from '../../utils/tournament-filters';
+import { sortTournaments } from '../../utils/tournament-sorting';
 import { colors, radius, spacing, typography } from '../../styles/tokens';
 
 const STATE_LABELS = {
@@ -77,6 +90,8 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedSort, setSelectedSort] = useState('endingSoon');
 
   useEffect(() => {
     loadTournaments();
@@ -151,6 +166,33 @@ export default function HomeScreen({ navigation }) {
     loadTournaments();
   }, [loadTournaments]);
 
+  const handleFilterSelect = useCallback((filterId) => {
+    // Animate layout changes for smooth filtering
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedFilter(filterId);
+
+    // If 'live' filter is selected, default to 'endingSoon' sort
+    if (filterId === 'live') {
+      setSelectedSort('endingSoon');
+    }
+  }, []);
+
+  const handleSortChange = useCallback((sortId) => {
+    // Animate layout changes for smooth sorting
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedSort(sortId);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    // Animate layout changes when clearing filters
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSelectedFilter('all');
+  }, []);
+
+  const handleChangeLocation = useCallback(() => {
+    setShowFilterModal(true);
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -165,22 +207,19 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>Tournaments</Text>
-          <View style={styles.filterBadge}>
-            <Icon name="location-on" size={12} color={colors.accent} />
-            <Text style={styles.filterBadgeText}>{locationLabel}</Text>
-          </View>
-        </View>
-        <View style={styles.headerActions}>
           <TouchableOpacity
+            style={styles.locationPicker}
             onPress={() => setShowFilterModal(true)}
-            style={styles.filterButton}
+            activeOpacity={0.7}
           >
-            <Icon name="tune" size={20} color={colors.textHighlight} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-            <Icon name="refresh" size={20} color={colors.textHighlight} />
+            <Icon name="location-on" size={16} color={colors.accent} />
+            <Text style={styles.locationPickerText}>{locationLabel}</Text>
+            <Icon name="expand-more" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
+        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+          <Icon name="refresh" size={20} color={colors.textHighlight} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -236,6 +275,10 @@ export default function HomeScreen({ navigation }) {
             );
           }
 
+          // Apply filters and sorting
+          const filteredTournaments = applyFilter(tournaments, selectedFilter, location);
+          const sortedTournaments = sortTournaments(filteredTournaments, selectedSort, location);
+
           return (
             <View key={key} style={styles.sectionContainer}>
               <SectionHeader
@@ -254,18 +297,41 @@ export default function HomeScreen({ navigation }) {
                     : undefined
                 }
               />
-              {tournaments.map((tournament) => (
-                <TournamentCard
-                  key={tournament.id}
-                  tournament={tournament}
-                  onPress={() =>
-                    navigation.navigate('TournamentDetail', { id: tournament.id })
-                  }
-                  joined={isTournamentJoined(tournament.id)}
-                  showJoinBadge={key !== 'other'}
-                  scopeLabel={getScopeLabel(tournament, stateLabel)}
+
+              {/* Filter and Sort Controls */}
+              <View style={styles.filterSortRow}>
+                <FilterChips
+                  selectedFilter={selectedFilter}
+                  onFilterSelect={handleFilterSelect}
                 />
-              ))}
+                <View style={styles.sortContainer}>
+                  <SortDropdown
+                    selectedSort={selectedSort}
+                    onSortChange={handleSortChange}
+                  />
+                </View>
+              </View>
+
+              {sortedTournaments.length === 0 ? (
+                <FilterEmptyState
+                  onClearFilters={handleClearFilters}
+                  onChangeLocation={handleChangeLocation}
+                />
+              ) : (
+                sortedTournaments.map((tournament) => (
+                  <TournamentCard
+                    key={tournament.id}
+                    tournament={tournament}
+                    onPress={() =>
+                      navigation.navigate('TournamentDetail', { id: tournament.id })
+                    }
+                    joined={isTournamentJoined(tournament.id)}
+                    showJoinBadge={key !== 'other'}
+                    scopeLabel={getScopeLabel(tournament, stateLabel)}
+                    currentLocation={locationLabel}
+                  />
+                ))
+              )}
             </View>
           );
         })}
@@ -281,7 +347,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Location</Text>
+              <Text style={styles.modalTitle}>Choose Location</Text>
               <TouchableOpacity
                 onPress={() => setShowFilterModal(false)}
                 style={styles.modalCloseButton}
@@ -292,9 +358,9 @@ export default function HomeScreen({ navigation }) {
 
             <ScrollView style={styles.modalScrollView}>
               <View style={styles.modalBody}>
-                <Text style={styles.modalLabel}>YOU'RE BROWSING</Text>
+                <Text style={styles.modalLabel}>SELECT YOUR LOCATION</Text>
                 <Text style={styles.modalSubtitle}>
-                  Showing tournaments in {stateLabel}
+                  Showing tournaments near your selected area
                 </Text>
 
                 <View style={styles.modalPresets}>
@@ -364,30 +430,23 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.heading,
   },
-  filterBadge: {
+  locationPicker: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     alignSelf: 'flex-start',
-  },
-  filterBadgeText: {
-    ...typography.caption,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: 'rgba(51, 183, 146, 0.12)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(51, 183, 146, 0.25)',
+  },
+  locationPickerText: {
+    ...typography.body,
+    fontSize: 15,
+    color: colors.textHighlight,
+    fontWeight: '600',
   },
   refreshButton: {
     padding: spacing.xs,
@@ -397,11 +456,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   scrollContainer: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
   sectionContainer: {
     marginBottom: spacing.xl,
+  },
+  filterSortRow: {
+    marginBottom: spacing.md,
+  },
+  sortContainer: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   sectionEmpty: {
     flexDirection: 'row',
@@ -413,6 +479,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    marginHorizontal: spacing.lg,
   },
   sectionEmptyText: {
     ...typography.body,
@@ -429,6 +496,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.danger,
     marginBottom: spacing.lg,
+    marginHorizontal: spacing.lg,
   },
   errorText: {
     ...typography.body,

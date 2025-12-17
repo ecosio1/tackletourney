@@ -327,8 +327,10 @@ export default function TournamentDetailScreen({ route, navigation }) {
               label='Anglers'
               value={tournament.participant_count ?? 0}
             />
+          </View>
+          <View style={styles.heroSecondaryStats}>
             <StatPill
-              icon='emoji-events'
+              icon='phishing'
               label='My Catches'
               value={catchesForTournament.length}
             />
@@ -519,6 +521,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
     marginTop: spacing.sm,
+  },
+  heroSecondaryStats: {
+    marginTop: spacing.sm,
+    alignItems: 'flex-start',
   },
   sectionCard: {
     padding: spacing.lg,
